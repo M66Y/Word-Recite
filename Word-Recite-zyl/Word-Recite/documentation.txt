@@ -1,0 +1,98 @@
+数据库结构与接口文档
+=======================
+
+一、 数据库结构 (Database Structure)
+建议使用的数据库表结构如下，以支持用户管理、词书管理、背诵计划和学习进度。
+
+1. 用户表 (users)
+   - user_id (INT, PK, Auto Increment): 用户ID
+   - username (VARCHAR(50), Unique): 用户名
+   - password_hash (VARCHAR(255)): 密码哈希值 (MD5加密)
+   - created_at (DATETIME): 注册时间
+
+2. 词书表 (wordbooks)
+   - wordbook_id (INT, PK, Auto Increment): 词书ID
+   - name (VARCHAR(100)): 词书名称
+   - description (TEXT): 词书描述
+   - created_at (DATETIME): 创建时间
+
+3. 单词表 (words)
+   - word_id (INT, PK, Auto Increment): 单词ID
+   - wordbook_id (INT, FK -> wordbooks.wordbook_id): 所属词书ID
+   - word (VARCHAR(100)): 单词拼写
+   - definition (TEXT): 单词释义
+   - phonetic (VARCHAR(50)): 音标
+
+4. 学习计划表 (study_plans)
+   - plan_id (INT, PK, Auto Increment): 计划ID
+   - user_id (INT, FK -> users.user_id): 用户ID
+   - wordbook_id (INT, FK -> wordbooks.wordbook_id): 关联词书ID
+   - plan_name (VARCHAR(100)): 计划名称
+   - total_days (INT): 计划总天数
+   - words_per_day (INT): 每日单词数
+   - start_date (DATE): 开始日期
+
+5. 每日任务表 (daily_tasks)
+   - task_id (INT, PK, Auto Increment): 任务ID
+   - plan_id (INT, FK -> study_plans.plan_id): 关联计划ID
+   - day_number (INT): 第几天 (1, 2, 3...)
+   - new_words_count (INT): 新词数量
+   - review_words_count (INT): 复习词数量
+   - is_completed (BIT): 是否完成
+
+6. 单词学习进度表 (word_progress)
+   - progress_id (INT, PK, Auto Increment): 进度ID
+   - plan_id (INT, FK -> study_plans.plan_id): 关联计划ID
+   - word_id (INT, FK -> words.word_id): 单词ID
+   - study_status (ENUM): 学习状态 ('new', 'learning', 'mastered')
+   - last_studied_at (DATETIME): 上次学习时间
+   - correct_count (INT): 答对次数
+   - incorrect_count (INT): 答错次数
+
+-----------------------
+
+二、 Java 类接口说明 (Java Class Interfaces)
+已完成的代码重构，封装了数据库连接、用户注册与登录功能。
+
+1. com.wordapp.database.DatabaseHelper
+   功能：单例模式管理数据库连接。
+   - public static synchronized DatabaseHelper getInstance(): 获取实例
+   - public Connection getConnection(): 获取数据库连接
+   - public void close(Connection conn, Statement stmt, ResultSet rs): 关闭资源
+
+2. com.wordapp.util.SecurityUtil
+   功能：提供安全相关的工具方法。
+   - public static String md5(String input): 对字符串进行MD5加密，返回十六进制字符串。
+
+3. com.wordapp.model.User
+   功能：用户数据模型类。
+   - int getUserId() / void setUserId(int)
+   - String getUsername() / void setUsername(String)
+   - String getPasswordHash() / void setPasswordHash(String)
+   - Timestamp getCreatedAt() / void setCreatedAt(Timestamp)
+
+4. com.wordapp.dao.UserDAO
+   功能：封装用户相关的数据库操作。
+   - public boolean register(String username, String password): 用户注册
+     - 参数: 用户名, 明文密码
+     - 逻辑: 检查是否存在 -> 加密密码 -> 插入数据库
+     - 返回: 成功true, 失败false
+   - public User login(String username, String password): 用户登录
+     - 参数: 用户名, 明文密码
+     - 逻辑: 加密密码 -> 查询数据库匹配 -> 返回User对象
+     - 返回: 登录成功返回User对象，失败返回null
+   - public boolean isUserExists(String username): 检查用户名是否存在
+
+-----------------------
+
+三、 使用示例 (Usage Example)
+参考 src/com/wordapp/Main.java:
+
+UserDAO userDAO = new UserDAO();
+// 注册
+userDAO.register("zhangsan", "123456");
+// 登录
+User user = userDAO.login("zhangsan", "123456");
+if (user != null) {
+    System.out.println("登录成功: " + user.getUsername());
+}
